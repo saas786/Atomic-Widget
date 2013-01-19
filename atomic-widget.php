@@ -79,7 +79,7 @@ function atomic_widgets_update( $new_instance, $old_instance ) {
 	$instance = $new_instance;
 
 	/* atomic context instance */
-	$instance['atomic_context'] = $_POST['atomic_context'];
+	$instance['atomic_context'] = trim( strip_tags( $_POST['atomic_context'] ) );
 
 	return $instance;
 }
