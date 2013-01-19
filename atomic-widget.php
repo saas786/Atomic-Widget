@@ -39,7 +39,7 @@ function atomic_widget_setup(){
 	add_action( 'in_widget_form', 'atomic_widgets_form', 10, 3 );
 
 	/* front end output */
-	add_filter( 'widget_display_callback', 'atomic_widgets_display' );
+	add_filter( 'widget_display_callback', 'atomic_widgets_display', 10, 3 );
 
 	/* update widget instance */
 	add_filter( 'widget_update_callback', 'atomic_widgets_update', 10, 2 );
@@ -53,17 +53,19 @@ function atomic_widget_setup(){
  */
 function atomic_widgets_form( $widget, $return, $instance ){
 
-	/* $return */
 	if ( $return == 'noform') {
 		$return = true;
 	}
 
+	/* widget id */
+	$widget_id = $widget->id;
+
 	/* get instance */
-	$instance = atomic_widgets_init_instance( $instance );
+	$instance = atomic_widgets_init_instance( $widget_id, $instance );
 
 	/* HTML Form */
 	?>
-	<p><label for="atomic_context-<?php echo $widget->id; ?>">Atomic Context:</label><textarea class="widefat" rows="2" id="atomic_context-<?php echo $widget->id; ?>" name="atomic_context"><?php echo $instance['atomic_context']; ?></textarea></p>
+	<p><label for="atomic_context-<?php echo $widget_id; ?>">Atomic Context:</label><textarea class="widefat" rows="2" id="atomic_context-<?php echo $widget_id; ?>" name="atomic_context"><?php echo $instance['atomic_context']; ?></textarea></p>
 
 	<?php
 }
@@ -89,21 +91,29 @@ function atomic_widgets_update( $new_instance, $old_instance ) {
  *
  * @since 0.1.0
  */
-function atomic_widgets_display( $instance ) {
+function atomic_widgets_display( $instance, $widget, $args ) {
 
-	$instance = atomic_widgets_init_instance( $instance );
+	/* widget id */
+	$widget_id = $widget->id;
+
+	/* instance */
+	$instance = atomic_widgets_init_instance( $widget_id, $instance );
 
 	/* check */
 	if ( $instance['atomic_context'] ) {
 
 		/* if in conditional, display it */
 		if ( atomic_widget_conditional( $instance['atomic_context'] ) )
-			return $instance;
+			$instance = $instance;
 
 		/* if not, don't display the widget */
 		else
-			return false;
+			$instance = false;
 	}
+
+	/* atomic filter, to easily disable the widgets using atomic context */
+	if( function_exists('apply_atomic') )
+		$instance = apply_atomic( 'atomic_widgets_display_' . $widget_id, $instance );
 
 	return $instance;
 }
@@ -114,11 +124,16 @@ function atomic_widgets_display( $instance ) {
  *
  * @since 0.1.0
  */
-function atomic_widgets_init_instance( $instance ) {
+function atomic_widgets_init_instance( $widget_id, $instance ) {
 
+	/* if it's not set, set it. */
 	if ( !isset( $instance['atomic_context'] ) ) {
 		$instance['atomic_context'] = '';
 	}
+
+	/* atomic filter, to easily modify input */
+	if( function_exists('apply_atomic') )
+		$instance['atomic_context'] = apply_atomic( 'atomic_widgets_' . $widget_id, $instance['atomic_context'] );
 
 	return $instance;
 }
@@ -127,27 +142,27 @@ function atomic_widgets_init_instance( $instance ) {
 /**
  * Atomic Context Conditional 
  * 
- * @param $needles	atomic context target
+ * @param $targets	mixed	atomic context target (the needles)
  * @since 0.1.0
  */
-function atomic_widget_conditional( $needles ){
+function atomic_widget_conditional( $targets ){
 
-	/* return if not supported */
+	/* return "true" if not supported to display the widget */
 	if( !function_exists('hybrid_get_context') )
 		return true;
 
 	/* default is "false" */
 	$out = false;
 
-	/* if empty set to true */
-	if ( empty( $needles ) )
+	/* if empty set to "true" */
+	if ( empty( $targets ) )
 		$out = true;
 
-	/* if it's not an array */
-	if ( !is_array( $needles ) )
-		$needles = explode( ',', $needles ); // make it an array
+	/* if it's not an array, make it an array */
+	if ( !is_array( $targets ) )
+		$targets = explode( ',', $targets );
 
-	/* current page context: "the haystack" */
+	/* current page context (the haystack) */
 	$contexts = array();
 	if( function_exists('hybrid_get_context') )
 		$contexts = hybrid_get_context();
@@ -156,23 +171,23 @@ function atomic_widget_conditional( $needles ){
 	$contexts[] = "wp"; // so we can exclude better.
 
 	/* foreach needles */
-	foreach ( $needles as $needle ){
+	foreach ( $targets as $target ){
 
 		/* trim it */
-		$needle = trim( $needle );
+		$target = trim( $target );
 
-		/* if needle if found */
-		if ( in_array( $needle, $contexts ) )
+		/* if target context is found */
+		if ( in_array( $target, $contexts ) )
 			$out = true;
 
-		/* if needles have "!" */
-		if ( strpos( $needle, '!' ) !== false ) {
+		/* if target have "!" */
+		if ( strpos( $target, '!' ) !== false ) {
 
 			/* remove "!" char */
-			$clean_needle = trim( str_replace ( '!', '', $needle ) );
+			$clean_target = trim( str_replace ( '!', '', $target ) );
 
 			/* if excluded set it to false */
-			if ( in_array( $clean_needle, $contexts ) )
+			if ( in_array( $clean_target, $contexts ) )
 				$out = false;
 		}
 	}
