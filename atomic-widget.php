@@ -148,7 +148,7 @@ function atomic_widget_conditional( $needles ){
 		$needles = explode( ',', $needles ); // make it an array
 
 	/* current page context: "the haystack" */
-	$contexts = '';
+	$contexts = array();
 	if( function_exists('hybrid_get_context') )
 		$contexts = hybrid_get_context();
 
