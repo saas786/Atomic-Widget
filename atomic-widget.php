@@ -152,6 +152,9 @@ function atomic_widget_conditional( $needles ){
 	if( function_exists('hybrid_get_context') )
 		$contexts = hybrid_get_context();
 
+	/* add "wp" in context to display in all context */
+	$contexts[] = "wp"; // so we can exclude better.
+
 	/* foreach needles */
 	foreach ( $needles as $needle ){
 
