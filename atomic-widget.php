@@ -2,13 +2,23 @@
 /**
  * Plugin Name: Atomic Widget
  * Plugin URI: http://shellcreeper.com/
- * Description: Display widget based on Hybrid Core atomic context. 
+ * Description: Atomic Widget lets you control on which pages widgets appear using Hybrid Core Atomic Context. It only works for theme powered by <a href="http://themehybrid.com/hybrid-core">Hybrid Core</a>.
  * Version: 0.1.0-beta
  * Author: David Chandra Purnama
  * Author URI: http://shellcreeper.com/
  *
  * This plugin is similar to widget logic plugin by Alan Trewartha but alot simpler.
  * And it uses Hybrid Core - Atomic Context by Justin Tadlock.
+ * 
+ * Available filter hook:
+ * 1. atomic_widget_display_{widget-id}
+ * 		filter to modify output for each widget (bool, true/false)
+ * 2. atomic_widget_{widget-id}
+ * 		filter to modify "atomic_context" instance input for each widgets (string)
+ * 3. atomic_widgets_contexts
+ * 		filter to modify contexts without adding it to hybrid core contexts. (array)
+ * 4. atomic_widgets_conditional
+ * 		filter to modify conditional output (bool, true/false) 
  * 
  * This plugins is based on:
  * 1. Conditional Widgets by Jason Lemahieu and Kevin Graeme.
@@ -33,18 +43,24 @@
 /* Hooks to 'plugins_loaded'  */
 add_action( 'plugins_loaded','atomic_widget_setup' );
 
+/**
+ * Setup on plugins loaded hook
+ * 
+ * @since 0.1.0
+ */
 function atomic_widget_setup(){
 
 	/* create form in each widgets */
 	add_action( 'in_widget_form', 'atomic_widgets_form', 10, 3 );
 
-	/* front end output */
+	/* front end display output */
 	add_filter( 'widget_display_callback', 'atomic_widgets_display', 10, 3 );
 
 	/* update widget instance */
 	add_filter( 'widget_update_callback', 'atomic_widgets_update', 10, 2 );
 
 }
+
 
 /**
  * Display the form at the bottom of each widget.
@@ -60,12 +76,17 @@ function atomic_widgets_form( $widget, $return, $instance ){
 	/* widget id */
 	$widget_id = $widget->id;
 
+	/* status: OFF if not using hybrid core theme */
+	$status = '';
+	if( !function_exists('hybrid_get_context') )
+		$status = '<span style="font-weight:bold;color:#ff2222;">OFF</span>';
+
 	/* get instance */
 	$instance = atomic_widgets_init_instance( $widget_id, $instance );
 
 	/* HTML Form */
 	?>
-	<p><label for="atomic_context-<?php echo $widget_id; ?>">Atomic Context:</label><textarea class="widefat" rows="2" id="atomic_context-<?php echo $widget_id; ?>" name="atomic_context"><?php echo $instance['atomic_context']; ?></textarea></p>
+	<p><label for="atomic_context-<?php echo $widget_id; ?>">Atomic Context:</label> <?php echo $status; ?><textarea class="widefat" rows="2" id="atomic_context-<?php echo $widget_id; ?>" name="atomic_context"><?php echo $instance['atomic_context']; ?></textarea></p>
 
 	<?php
 }
@@ -80,11 +101,14 @@ function atomic_widgets_update( $new_instance, $old_instance ) {
 
 	$instance = $new_instance;
 
-	/* atomic context instance */
-	$instance['atomic_context'] = trim( strip_tags( $_POST['atomic_context'] ) );
+	/* sanitize input */
+	$atomic_context = trim( strip_tags( $_POST['atomic_context'] ) ); // stip tags, and trim it
+
+	$instance['atomic_context'] = $atomic_context;
 
 	return $instance;
 }
+
 
 /**
  * Front end display output.
@@ -103,7 +127,7 @@ function atomic_widgets_display( $instance, $widget, $args ) {
 	if ( $instance['atomic_context'] ) {
 
 		/* if in conditional, display it */
-		if ( atomic_widget_conditional( $instance['atomic_context'] ) )
+		if ( atomic_widgets_conditional( $instance['atomic_context'] ) )
 			$instance = $instance;
 
 		/* if not, don't display the widget */
@@ -111,9 +135,8 @@ function atomic_widgets_display( $instance, $widget, $args ) {
 			$instance = false;
 	}
 
-	/* atomic filter, to easily disable the widgets using atomic context */
-	if( function_exists('apply_atomic') )
-		$instance = apply_atomic( 'atomic_widgets_display_' . $widget_id, $instance );
+	/* filter, to easily disable widgets */
+	$instance = apply_filters( 'atomic_widget_display_' . $widget_id, $instance );
 
 	return $instance;
 }
@@ -131,9 +154,8 @@ function atomic_widgets_init_instance( $widget_id, $instance ) {
 		$instance['atomic_context'] = '';
 	}
 
-	/* atomic filter, to easily modify input */
-	if( function_exists('apply_atomic') )
-		$instance['atomic_context'] = apply_atomic( 'atomic_widgets_' . $widget_id, $instance['atomic_context'] );
+	/* filter, to modify input */
+	$instance['atomic_context'] = apply_filters( 'atomic_widget_' . $widget_id, $instance['atomic_context'] );
 
 	return $instance;
 }
@@ -145,7 +167,7 @@ function atomic_widgets_init_instance( $widget_id, $instance ) {
  * @param $targets	mixed	atomic context target (the needles)
  * @since 0.1.0
  */
-function atomic_widget_conditional( $targets ){
+function atomic_widgets_conditional( $targets ){
 
 	/* return "true" if not supported to display the widget */
 	if( !function_exists('hybrid_get_context') )
@@ -164,17 +186,23 @@ function atomic_widget_conditional( $targets ){
 
 	/* current page context (the haystack) */
 	$contexts = array();
+
+	/* in hybrid code themes, add core context. */
 	if( function_exists('hybrid_get_context') )
 		$contexts = hybrid_get_context();
 
 	/* add "wp" in context to display in all context */
 	$contexts[] = "wp"; // so we can exclude better.
 
-	/* foreach needles */
+	/* contexts filter, add widget context without add it in hybrid_get_context */
+	$contexts = apply_filters( 'atomic_widgets_contexts', $contexts );
+
+	/* foreach targets */
 	foreach ( $targets as $target ){
 
-		/* trim it */
-		$target = trim( $target );
+		/* sanitize */
+		$target = trim( strip_tags( $target ) );
+		$target = str_replace(' ', '', $target); // remove spaces
 
 		/* if target context is found */
 		if ( in_array( $target, $contexts ) )
@@ -192,5 +220,5 @@ function atomic_widget_conditional( $targets ){
 		}
 	}
 	/* output */
-	return $out;
+	return apply_filters( 'atomic_widgets_conditional', $out );
 }
