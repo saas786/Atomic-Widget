@@ -3,7 +3,6 @@
  * Bulk Modify Context in Array Using Anonymous Function
  * Require PHP 5.3
  * 
- * 
  * @since 0.1.0
  */
 
