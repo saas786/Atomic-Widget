@@ -1,9 +1,9 @@
 <?php
 /**
  * Plugin Name: Atomic Widget
- * Plugin URI: http://shellcreeper.com/
- * Description: Atomic Widget lets you control on which pages widgets appear using Hybrid Core Atomic Context. It only works for theme powered by <a href="http://themehybrid.com/hybrid-core">Hybrid Core</a>.
- * Version: 0.1.0-beta
+ * Plugin URI: https://github.com/turtlepod/Atomic-Widget
+ * Description: This plugin gives every widget an extra control field called "Atomic Widget" that lets you control the pages that the widget will appear on. The text field lets you use <a href="http://themehybrid.com/docs/tutorials/hybrid-core-context">Hybrid Core Atomic Context</a> by <a href="http://justintadlock.com/">Justin Tadlock</a>.
+ * Version: 0.1.0
  * Author: David Chandra Purnama
  * Author URI: http://shellcreeper.com/
  *
@@ -15,10 +15,12 @@
  * 		filter to modify output for each widget (bool, true/false)
  * 2. atomic_widget_{widget-id}
  * 		filter to modify "atomic_context" instance input for each widgets (string)
- * 3. atomic_widgets_contexts
+ * 3. atomic_widget_context
  * 		filter to modify contexts without adding it to hybrid core contexts. (array)
- * 4. atomic_widgets_conditional
+ * 4. atomic_widget_conditional
  * 		filter to modify conditional output (bool, true/false) 
+ * 5. atomic_widgets (require PHP 5.3)
+ * 		bulk filter to modify each widgets in one array.
  * 
  * This plugins is based on:
  * 1. Conditional Widgets by Jason Lemahieu and Kevin Graeme.
@@ -40,8 +42,14 @@
  * @license http://www.gnu.org/licenses/old-licenses/gpl-2.0.html
  */
 
+
+/* Version */
+define( 'ATOMIC_WIDGET_VERSION', '0.1.0' );
+
+
 /* Hooks to 'plugins_loaded'  */
 add_action( 'plugins_loaded','atomic_widget_setup' );
+
 
 /**
  * Setup on plugins loaded hook
@@ -51,14 +59,18 @@ add_action( 'plugins_loaded','atomic_widget_setup' );
 function atomic_widget_setup(){
 
 	/* create form in each widgets */
-	add_action( 'in_widget_form', 'atomic_widgets_form', 10, 3 );
+	add_action( 'in_widget_form', 'atomic_widget_form', 10, 3 );
 
 	/* front end display output */
-	add_filter( 'widget_display_callback', 'atomic_widgets_display', 10, 3 );
+	add_filter( 'widget_display_callback', 'atomic_widget_display', 10, 3 );
 
 	/* update widget instance */
-	add_filter( 'widget_update_callback', 'atomic_widgets_update', 10, 2 );
+	add_filter( 'widget_update_callback', 'atomic_widget_update', 10, 2 );
 
+	/* bulk modify context using PHP 5.3 anonymous function */
+	if ( version_compare( PHP_VERSION, '5.3.0' ) >= 0 ) {
+		require_once( trailingslashit( plugin_dir_path( __FILE__) ) . 'bulk-filter.php' );
+	}
 }
 
 
@@ -67,7 +79,7 @@ function atomic_widget_setup(){
  *
  * @since 0.1.0
  */
-function atomic_widgets_form( $widget, $return, $instance ){
+function atomic_widget_form( $widget, $return, $instance ){
 
 	if ( $return == 'noform') {
 		$return = true;
@@ -76,17 +88,15 @@ function atomic_widgets_form( $widget, $return, $instance ){
 	/* widget id */
 	$widget_id = $widget->id;
 
-	/* status: OFF if not using hybrid core theme */
-	$status = '';
-	if( !function_exists('hybrid_get_context') )
-		$status = '<span style="font-weight:bold;color:#ff2222;">OFF</span>';
+	/* display widget id */
+	$display_id = '<apan style="color:#037d12">' . $widget_id . '</span>';
 
 	/* get instance */
-	$instance = atomic_widgets_init_instance( $widget_id, $instance );
+	$instance = atomic_widget_init_instance( $widget_id, $instance );
 
 	/* HTML Form */
 	?>
-	<p><label for="atomic_context-<?php echo $widget_id; ?>">Atomic Context:</label> <?php echo $status; ?><textarea class="widefat" rows="2" id="atomic_context-<?php echo $widget_id; ?>" name="atomic_context"><?php echo $instance['atomic_context']; ?></textarea></p>
+	<p><label for="atomic_context-<?php echo $widget_id; ?>">Atomic Context: <?php echo $display_id; ?></label><textarea class="widefat" rows="2" id="atomic_context-<?php echo $widget_id; ?>" name="atomic_context"><?php echo $instance['atomic_context']; ?></textarea></p>
 
 	<?php
 }
@@ -97,7 +107,7 @@ function atomic_widgets_form( $widget, $return, $instance ){
  *
  * @since 0.1.0
  */
-function atomic_widgets_update( $new_instance, $old_instance ) {
+function atomic_widget_update( $new_instance, $old_instance ) {
 
 	$instance = $new_instance;
 
@@ -115,19 +125,19 @@ function atomic_widgets_update( $new_instance, $old_instance ) {
  *
  * @since 0.1.0
  */
-function atomic_widgets_display( $instance, $widget, $args ) {
+function atomic_widget_display( $instance, $widget, $args ) {
 
 	/* widget id */
 	$widget_id = $widget->id;
 
 	/* instance */
-	$instance = atomic_widgets_init_instance( $widget_id, $instance );
+	$instance = atomic_widget_init_instance( $widget_id, $instance );
 
 	/* check */
 	if ( $instance['atomic_context'] ) {
 
 		/* if in conditional, display it */
-		if ( atomic_widgets_conditional( $instance['atomic_context'] ) )
+		if ( atomic_widget_conditional( $instance['atomic_context'] ) )
 			$instance = $instance;
 
 		/* if not, don't display the widget */
@@ -147,7 +157,7 @@ function atomic_widgets_display( $instance, $widget, $args ) {
  *
  * @since 0.1.0
  */
-function atomic_widgets_init_instance( $widget_id, $instance ) {
+function atomic_widget_init_instance( $widget_id, $instance ) {
 
 	/* if it's not set, set it. */
 	if ( !isset( $instance['atomic_context'] ) ) {
@@ -167,16 +177,12 @@ function atomic_widgets_init_instance( $widget_id, $instance ) {
  * @param $targets	mixed	atomic context target (the needles)
  * @since 0.1.0
  */
-function atomic_widgets_conditional( $targets ){
-
-	/* return "true" if not supported to display the widget */
-	if( !function_exists('hybrid_get_context') )
-		return true;
+function atomic_widget_conditional( $targets ){
 
 	/* default is "false" */
 	$out = false;
 
-	/* if empty set to "true" */
+	/* if empty set to "true" to display widget in all context */
 	if ( empty( $targets ) )
 		$out = true;
 
@@ -191,11 +197,18 @@ function atomic_widgets_conditional( $targets ){
 	if( function_exists('hybrid_get_context') )
 		$contexts = hybrid_get_context();
 
-	/* add "wp" in context to display in all context */
+	/* in non hybrid code themes, add alternate context. */
+	else
+		$contexts = atomic_widget_context_alt();
+
+	/* add "wp" in context to display widget in all context */
 	$contexts[] = "wp"; // so we can exclude better.
 
 	/* contexts filter, add widget context without add it in hybrid_get_context */
-	$contexts = apply_filters( 'atomic_widgets_contexts', $contexts );
+	$contexts = array_map( 'esc_attr', apply_filters( 'atomic_widget_context', $contexts ) );
+
+	/* make sure each context is unique */
+	$contexts = array_unique( $contexts );
 
 	/* foreach targets */
 	foreach ( $targets as $target ){
@@ -220,5 +233,111 @@ function atomic_widgets_conditional( $targets ){
 		}
 	}
 	/* output */
-	return apply_filters( 'atomic_widgets_conditional', $out );
+	return apply_filters( 'atomic_widget_conditional', $out );
+}
+
+
+/**
+ * Atomic Context Alternate 
+ * 
+ * Create atomic context when not using hybrid core theme.
+ * just a duplicate from hybrid_get_context() function from Hybrid Core
+ * So we can use it for other theme.
+ * 
+ * @author		Justin Tadlock <justin@justintadlock.com>
+ * @copyright	Copyright (c) 2008 - 2013, Justin Tadlock
+ * @link		http://themehybrid.com/hybrid-core
+ * @link		http://themehybrid.com/docs/tutorials/hybrid-core-context
+ * @license		http://www.gnu.org/licenses/old-licenses/gpl-2.0.html
+ * @since		0.1.0
+ */
+function atomic_widget_context_alt(){
+
+	/* Set some variables for use within the function. */
+	$contexts = array();
+	$object = get_queried_object();
+	$object_id = get_queried_object_id();
+
+	/* Front page of the site. */
+	if ( is_front_page() )
+		$contexts[] = 'home';
+
+	/* Blog page. */
+	if ( is_home() ) {
+		$contexts[] = 'blog';
+	}
+
+	/* Singular views. */
+	elseif ( is_singular() ) {
+		$contexts[] = 'singular';
+		$contexts[] = "singular-{$object->post_type}";
+		$contexts[] = "singular-{$object->post_type}-{$object_id}";
+	}
+
+	/* Archive views. */
+	elseif ( is_archive() ) {
+		$contexts[] = 'archive';
+
+		/* Post type archives. */
+		if ( is_post_type_archive() ) {
+			$post_type = get_post_type_object( get_query_var( 'post_type' ) );
+			$contexts[] = "archive-{$post_type->name}";
+		}
+
+		/* Taxonomy archives. */
+		if ( is_tax() || is_category() || is_tag() ) {
+			$contexts[] = 'taxonomy';
+			$contexts[] = "taxonomy-{$object->taxonomy}";
+
+			$slug = ( ( 'post_format' == $object->taxonomy ) ? str_replace( 'post-format-', '', $object->slug ) : $object->slug );
+			$contexts[] = "taxonomy-{$object->taxonomy}-" . sanitize_html_class( $slug, $object->term_id );
+		}
+
+		/* User/author archives. */
+		if ( is_author() ) {
+			$user_id = get_query_var( 'author' );
+			$contexts[] = 'user';
+			$contexts[] = 'user-' . sanitize_html_class( get_the_author_meta( 'user_nicename', $user_id ), $user_id );
+		}
+
+		/* Date archives. */
+		if ( is_date() ) {
+			$contexts[] = 'date';
+
+			if ( is_year() )
+				$contexts[] = 'year';
+
+			if ( is_month() )
+				$contexts[] = 'month';
+
+			if ( get_query_var( 'w' ) )
+				$contexts[] = 'week';
+
+			if ( is_day() )
+				$contexts[] = 'day';
+		}
+
+		/* Time archives. */
+		if ( is_time() ) {
+			$contexts[] = 'time';
+
+			if ( get_query_var( 'hour' ) )
+				$contexts[] = 'hour';
+
+			if ( get_query_var( 'minute' ) )
+				$contexts[] = 'minute';
+		}
+	}
+
+	/* Search results. */
+	elseif ( is_search() ) {
+		$contexts[] = 'search';
+	}
+
+	/* Error 404 pages. */
+	elseif ( is_404() ) {
+		$contexts[] = 'error-404';
+	}
+
+	return $contexts;
 }

@@ -1,0 +1,63 @@
+﻿<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+<meta http-equiv="Content-Type" content="text/html;charset=utf-8" />
+<title>Atomic Widget - Read Me</title>
+
+<style type="text/css">html{background:#d3d4ca;}body{background:#fff;width:750px;margin:36px auto 60px auto;font:16px/25px Georgia,Times,'Times New Roman',serif;padding:20px;border:5px solid #668982;}a:link,a:visited{color:#2f6eb9;text-decoration:none}a:hover,a:active{text-decoration:underline}h1,h2,h3,h4,h5,h6{margin:0;color:#668982;font-weight:bold;font-family:Arial,sans-serif}h1{font-size:2.2em}code{padding:0 3px;background:#eee}pre code{padding:0}pre{padding:9px;background:#eee;border:1px solid #ccc}ul{list-style:square}p.first{font-size:21px;border-bottom:2px solid #668982;padding-bottom:30px;}p.second{font-size:15px}ul.space li{margin-bottom:10px}.section{overflow:hidden}.columns-2{float:left;width:350px;margin:0 0 21px 25px}.columns-3{float:left;width:230px;margin:0 0 21px 20px}</style>
+
+</head>
+<body>
+
+<h1>Atomic Widget</h1>
+
+<p class="first"><em>Description:</em> This plugin gives every widget an extra control field called "Atomic Widget" that lets you control the pages that the widget will appear on. The text field lets you use <a href="http://themehybrid.com/docs/tutorials/hybrid-core-context">Hybrid Core Atomic Context</a> by <a href="http://justintadlock.com/">Justin Tadlock</a>.</p>
+
+<h2>Example</h2>
+
+<p><em>Blog page:</em> <code>home</code> or <code>blog</code></p>
+<p><em>Front page:</em> <code>home</code></p>
+<p><em>Archive pages:</em> <code>archive</code></p>
+<p><em>Category archive:</em> <code>taxonomy-category</code></p>
+<p><em>Category archive with slug "x":</em> <code>taxonomy-category-x</code></p>
+<p><em>Multiple category archive with slug "x" or "y":</em> <code>taxonomy-category-x,taxonomy-category-y</code></p>
+<p><em>Singular post:</em> <code>singular-post</code></p>
+<p><em>Exclude singular pages:</em> <code>wp,!singular</code></p>
+<p><em>Exclude Home Page:</em> <code>wp,!home</code></p>
+<p><em>All singular except page (post type):</em> <code>singular,!singular-page</code></p>
+
+<h2>Available Filter</h2>
+
+<ul>
+	<li><code>atomic_widget_display_{widget-id}</code> <br/>filter to modify output for each widget (bool, true/false)</li>
+	<li><code>atomic_widget_{widget-id}</code> <br/>filter to modify "atomic_context" instance input for each widgets (string)</li>
+	<li><code>atomic_widget_context</code> <br/>filter to modify contexts without adding it to hybrid core contexts. (array)</li>
+	<li><code>atomic_widget_conditional</code> <br/>filter to modify conditional output (bool, true/false) </li>
+	<li><code>atomic_widgets</code> (require PHP 5.3)<br/>bulk filter to modify each widgets in one array.</li>
+</ul>
+
+<h2>Copyright &amp; license</h2>
+
+<p><em>Atomic Widget</em> is licensed under the <a href="http://www.gnu.org/licenses/old-licenses/gpl-2.0.html" title="GNU GPL">GNU General Public License</a>, version 2 (<acronym title="GNU General Public License">GPL</acronym>).</p>
+
+<p>This WordPress Plugin is copyrighted to <a href="http://turtlepod.org" title="David Chandra Purnama">David Chandra Purnama</a>.</p>
+
+<p>2012 &copy; David Chandra Purnama.  All rights reserved.</p>
+
+
+<h2>Credit &amp; inspiration</h2>
+
+<ul>
+	<li><a href="http://justintadlock.com/" title="Justin Tadlock - Theme Hybrid">Justin Tadlock</a> - Hybrid Core</li>
+	<li><a href="http://wordpress.org/extend/plugins/conditional-widgets/" title="Conditional Widgets">Jason Lemahieu and Kevin Graeme</a> - Conditional Widgets</li>
+	<li><a href="http://wordpress.org/extend/plugins/widget-logic/" title="Widget Logic">Alan Trewartha</a> - Widget Logic</li>
+	<li><a href="http://wordpress.org/extend/plugins/widget-context/" title="Widget Context">Kaspars Dambis</a> - Widget Context</li>
+</ul>
+
+<hr/>
+
+<h2>Changelog</h2>
+<p><em>Atomic Widget v.0.1.0</em><br/>
+Initial Release.</p>
+</body>
+</html>
