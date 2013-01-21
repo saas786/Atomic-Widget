@@ -19,6 +19,8 @@
  * 		filter to modify contexts without adding it to hybrid core contexts. (array)
  * 4. atomic_widgets_conditional
  * 		filter to modify conditional output (bool, true/false) 
+ * 5. atomic_widgets (require PHP 5.3)
+ * 		bulk filter to modify each widgets in one array.
  * 
  * This plugins is based on:
  * 1. Conditional Widgets by Jason Lemahieu and Kevin Graeme.
@@ -59,6 +61,10 @@ function atomic_widget_setup(){
 	/* update widget instance */
 	add_filter( 'widget_update_callback', 'atomic_widgets_update', 10, 2 );
 
+	/* bulk modify context using PHP 5.3 anonymous function */
+	if ( version_compare( PHP_VERSION, '5.3.0' ) >= 0 ) {
+		require_once( trailingslashit( plugin_dir_path( __FILE__) ) . 'bulk-filter.php' );
+	}
 }
 
 
@@ -76,12 +82,15 @@ function atomic_widgets_form( $widget, $return, $instance ){
 	/* widget id */
 	$widget_id = $widget->id;
 
+	/* display widget id */
+	$display_id = '<apan style="font-weight:bold;color:#037d12">' . $widget_id . '</span>';
+
 	/* get instance */
 	$instance = atomic_widgets_init_instance( $widget_id, $instance );
 
 	/* HTML Form */
 	?>
-	<p><label for="atomic_context-<?php echo $widget_id; ?>">Atomic Context:</label><textarea class="widefat" rows="2" id="atomic_context-<?php echo $widget_id; ?>" name="atomic_context"><?php echo $instance['atomic_context']; ?></textarea></p>
+	<p><label for="atomic_context-<?php echo $widget_id; ?>">Atomic Context: <?php echo $display_id; ?></label><textarea class="widefat" rows="2" id="atomic_context-<?php echo $widget_id; ?>" name="atomic_context"><?php echo $instance['atomic_context']; ?></textarea></p>
 
 	<?php
 }
@@ -191,6 +200,9 @@ function atomic_widgets_conditional( $targets ){
 
 	/* contexts filter, add widget context without add it in hybrid_get_context */
 	$contexts = array_map( 'esc_attr', apply_filters( 'atomic_widgets_contexts', $contexts ) );
+	
+	/* make sure each context is unique */
+	$contexts = array_unique( $contexts );
 
 	/* foreach targets */
 	foreach ( $targets as $target ){
