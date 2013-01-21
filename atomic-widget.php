@@ -76,17 +76,12 @@ function atomic_widgets_form( $widget, $return, $instance ){
 	/* widget id */
 	$widget_id = $widget->id;
 
-	/* status: OFF if not using hybrid core theme */
-	$status = '';
-	if( !function_exists('hybrid_get_context') )
-		$status = '<span style="font-weight:bold;color:#ff2222;">OFF</span>';
-
 	/* get instance */
 	$instance = atomic_widgets_init_instance( $widget_id, $instance );
 
 	/* HTML Form */
 	?>
-	<p><label for="atomic_context-<?php echo $widget_id; ?>">Atomic Context:</label> <?php echo $status; ?><textarea class="widefat" rows="2" id="atomic_context-<?php echo $widget_id; ?>" name="atomic_context"><?php echo $instance['atomic_context']; ?></textarea></p>
+	<p><label for="atomic_context-<?php echo $widget_id; ?>">Atomic Context:</label><textarea class="widefat" rows="2" id="atomic_context-<?php echo $widget_id; ?>" name="atomic_context"><?php echo $instance['atomic_context']; ?></textarea></p>
 
 	<?php
 }
@@ -169,10 +164,6 @@ function atomic_widgets_init_instance( $widget_id, $instance ) {
  */
 function atomic_widgets_conditional( $targets ){
 
-	/* return "true" if not supported to display the widget */
-	if( !function_exists('hybrid_get_context') )
-		return true;
-
 	/* default is "false" */
 	$out = false;
 
@@ -191,11 +182,15 @@ function atomic_widgets_conditional( $targets ){
 	if( function_exists('hybrid_get_context') )
 		$contexts = hybrid_get_context();
 
+	/* in non hybrid code themes, add alternate context. */
+	else
+		$contexts = atomic_widgets_context_alt();
+
 	/* add "wp" in context to display in all context */
 	$contexts[] = "wp"; // so we can exclude better.
 
 	/* contexts filter, add widget context without add it in hybrid_get_context */
-	$contexts = apply_filters( 'atomic_widgets_contexts', $contexts );
+	$contexts = array_map( 'esc_attr', apply_filters( 'atomic_widgets_contexts', $contexts ) );
 
 	/* foreach targets */
 	foreach ( $targets as $target ){
@@ -221,4 +216,108 @@ function atomic_widgets_conditional( $targets ){
 	}
 	/* output */
 	return apply_filters( 'atomic_widgets_conditional', $out );
+}
+
+
+/**
+ * Atomic Alternate Context 
+ * 
+ * Alternate Context when not using hybrid core theme.
+ * just a duplicate from hybrid_get_context() function from Hybrid Core
+ * 
+ * @author		Justin Tadlock <justin@justintadlock.com>
+ * @copyright	Copyright (c) 2008 - 2013, Justin Tadlock
+ * @link		http://themehybrid.com/hybrid-core
+ * @license		http://www.gnu.org/licenses/old-licenses/gpl-2.0.html
+ * @since		0.1.0
+ */
+function atomic_widgets_context_alt(){
+
+	/* Set some variables for use within the function. */
+	$contexts = array();
+	$object = get_queried_object();
+	$object_id = get_queried_object_id();
+
+	/* Front page of the site. */
+	if ( is_front_page() )
+		$contexts[] = 'home';
+
+	/* Blog page. */
+	if ( is_home() ) {
+		$contexts[] = 'blog';
+	}
+
+	/* Singular views. */
+	elseif ( is_singular() ) {
+		$contexts[] = 'singular';
+		$contexts[] = "singular-{$object->post_type}";
+		$contexts[] = "singular-{$object->post_type}-{$object_id}";
+	}
+
+	/* Archive views. */
+	elseif ( is_archive() ) {
+		$contexts[] = 'archive';
+
+		/* Post type archives. */
+		if ( is_post_type_archive() ) {
+			$post_type = get_post_type_object( get_query_var( 'post_type' ) );
+			$contexts[] = "archive-{$post_type->name}";
+		}
+
+		/* Taxonomy archives. */
+		if ( is_tax() || is_category() || is_tag() ) {
+			$contexts[] = 'taxonomy';
+			$contexts[] = "taxonomy-{$object->taxonomy}";
+
+			$slug = ( ( 'post_format' == $object->taxonomy ) ? str_replace( 'post-format-', '', $object->slug ) : $object->slug );
+			$contexts[] = "taxonomy-{$object->taxonomy}-" . sanitize_html_class( $slug, $object->term_id );
+		}
+
+		/* User/author archives. */
+		if ( is_author() ) {
+			$user_id = get_query_var( 'author' );
+			$contexts[] = 'user';
+			$contexts[] = 'user-' . sanitize_html_class( get_the_author_meta( 'user_nicename', $user_id ), $user_id );
+		}
+
+		/* Date archives. */
+		if ( is_date() ) {
+			$contexts[] = 'date';
+
+			if ( is_year() )
+				$contexts[] = 'year';
+
+			if ( is_month() )
+				$contexts[] = 'month';
+
+			if ( get_query_var( 'w' ) )
+				$contexts[] = 'week';
+
+			if ( is_day() )
+				$contexts[] = 'day';
+		}
+
+		/* Time archives. */
+		if ( is_time() ) {
+			$contexts[] = 'time';
+
+			if ( get_query_var( 'hour' ) )
+				$contexts[] = 'hour';
+
+			if ( get_query_var( 'minute' ) )
+				$contexts[] = 'minute';
+		}
+	}
+
+	/* Search results. */
+	elseif ( is_search() ) {
+		$contexts[] = 'search';
+	}
+
+	/* Error 404 pages. */
+	elseif ( is_404() ) {
+		$contexts[] = 'error-404';
+	}
+
+	return $contexts;
 }
