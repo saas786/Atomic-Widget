@@ -2,7 +2,7 @@
 /**
  * Plugin Name: Atomic Widget
  * Plugin URI: https://github.com/turtlepod/Atomic-Widget
- * Description: Atomic Widget lets you control on which pages widgets appear using Hybrid Core Atomic Context. Best for theme powered by <a href="http://themehybrid.com/hybrid-core">Hybrid Core</a>.
+ * Description: This plugin gives every widget an extra control field called "Atomic Widget" that lets you control the pages that the widget will appear on. The text field lets you use <a href="http://themehybrid.com/docs/tutorials/hybrid-core-context">Hybrid Core Atomic Context</a> by <a href="http://justintadlock.com/">Justin Tadlock</a>.
  * Version: 0.1.0
  * Author: David Chandra Purnama
  * Author URI: http://shellcreeper.com/
