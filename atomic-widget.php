@@ -1,7 +1,7 @@
 <?php
 /**
  * Plugin Name: Atomic Widget
- * Plugin URI: http://shellcreeper.com/
+ * Plugin URI: https://github.com/turtlepod/Atomic-Widget
  * Description: Atomic Widget lets you control on which pages widgets appear using Hybrid Core Atomic Context. Best for theme powered by <a href="http://themehybrid.com/hybrid-core">Hybrid Core</a>.
  * Version: 0.1.0
  * Author: David Chandra Purnama
