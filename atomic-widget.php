@@ -3,34 +3,9 @@
  * Plugin Name: Atomic Widget
  * Plugin URI: http://shellcreeper.com/portfolio/item/atomic-widget/
  * Description: This plugin gives every widget an extra control field called "Atomic Widget" that lets you control the pages that the widget will appear on. The text field lets you use <a href="http://themehybrid.com/docs/tutorials/hybrid-core-context">Hybrid Core Atomic Context</a> by <a href="http://justintadlock.com/">Justin Tadlock</a>.
- * Version: 0.1.2
+ * Version: 0.1.3
  * Author: David Chandra Purnama
  * Author URI: http://shellcreeper.com/
- *
- * This plugin is similar to widget logic plugin by Alan Trewartha but alot simpler.
- * And it uses Hybrid Core - Atomic Context by Justin Tadlock.
- * 
- * Available filter hook:
- * 1. atomic_widget_display_{widget-id}
- * 		filter to modify output for each widget (bool, true/false)
- * 2. atomic_widget_{widget-id}
- * 		filter to modify "atomic_context" instance input for each widgets (string)
- * 3. atomic_widget_context
- * 		filter to modify contexts without adding it to hybrid core contexts. (array)
- * 4. atomic_widget_conditional
- * 		filter to modify conditional output (bool, true/false) 
- * 5. atomic_widgets (require PHP 5.3)
- * 		bulk filter to modify each widgets in one array.
- * 6. atomic_widget_disable_sidebar
- * 		filter to disable sidebar if the sidebar have no widget. default: "true" (bool,true/false)
- * 
- * This plugins is based on:
- * 1. Conditional Widgets by Jason Lemahieu and Kevin Graeme.
- *		http://wordpress.org/extend/plugins/conditional-widgets/ 
- * 2. Widget Logic by Alan Trewartha.
- *		http://wordpress.org/extend/plugins/widget-logic/
- * 3. Widget Context by Kaspars Dambis.
- *		http://wordpress.org/extend/plugins/widget-context/
  * 
  * This program is free software; you can redistribute it and/or modify it under the terms  
  * of the GNU General Public License version 2, as published by the Free Software Foundation.
@@ -38,7 +13,7 @@
  * This program is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; 
  * without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
  *
- * @version 0.1.2
+ * @version 0.1.3
  * @author David Chandra Purnama <david.warna@gmail.com>
  * @copyright Copyright (c) 2013, David Chandra Purnama
  * @license http://www.gnu.org/licenses/old-licenses/gpl-2.0.html
@@ -46,11 +21,11 @@
 
 
 /* Version */
-define( 'ATOMIC_WIDGET_VERSION', '0.1.2' );
+define( 'ATOMIC_WIDGET_VERSION', '0.1.3' );
 
 
-/* Hooks to 'plugins_loaded'  */
-add_action( 'plugins_loaded','atomic_widget_setup' );
+/* Hooks to 'init', plugins loaded is too soon?  */
+add_action( 'init','atomic_widget_setup' );
 
 
 /**
@@ -76,6 +51,9 @@ function atomic_widget_setup(){
 	if ( version_compare( PHP_VERSION, '5.3.0' ) >= 0 ) {
 		require_once( trailingslashit( plugin_dir_path( __FILE__) ) . 'bulk-filter.php' );
 	}
+
+	/* $atomic_widget_context global */
+	add_action( 'template_redirect', 'atomic_widget_context' );
 }
 
 
@@ -252,7 +230,7 @@ function atomic_widget_conditional( $targets ){
 	$contexts = array();
 
 	/* add context. */
-	$contexts = apply_filters( 'hybrid_context', atomic_widget_context_alt() );
+	$contexts = apply_filters( 'hybrid_context', atomic_widget_context() );
 
 	/* add "wp" in context to display widget in all context */
 	$contexts[] = "wp"; // so we can exclude better.
@@ -290,8 +268,9 @@ function atomic_widget_conditional( $targets ){
 }
 
 
+
 /**
- * Atomic Context Alternate 
+ * Atomic Widget Context Alternate 
  * 
  * Create atomic context when not using hybrid core theme.
  * just a duplicate from hybrid_get_context() function from Hybrid Core
@@ -302,95 +281,101 @@ function atomic_widget_conditional( $targets ){
  * @link		http://themehybrid.com/hybrid-core
  * @link		http://themehybrid.com/docs/tutorials/hybrid-core-context
  * @license		http://www.gnu.org/licenses/old-licenses/gpl-2.0.html
- * @since		0.1.0
+ * @since		0.1.3
  */
-function atomic_widget_context_alt(){
+function atomic_widget_context(){
+
+	global $atomic_widget_context;
+
+	/* If $atomic_widget_context has been set. Just return the variable. */
+	if ( isset( $atomic_widget_context ) )
+		return $atomic_widget_context;
 
 	/* Set some variables for use within the function. */
-	$contexts = array();
+	$atomic_widget_context = array();
 	$object = get_queried_object();
 	$object_id = get_queried_object_id();
 
 	/* Front page of the site. */
 	if ( is_front_page() )
-		$contexts[] = 'home';
+		$atomic_widget_context[] = 'home';
 
 	/* Blog page. */
 	if ( is_home() ) {
-		$contexts[] = 'blog';
+		$atomic_widget_context[] = 'blog';
 	}
 
 	/* Singular views. */
 	elseif ( is_singular() ) {
-		$contexts[] = 'singular';
-		$contexts[] = "singular-{$object->post_type}";
-		$contexts[] = "singular-{$object->post_type}-{$object_id}";
+		$atomic_widget_context[] = 'singular';
+		$atomic_widget_context[] = "singular-{$object->post_type}";
+		$atomic_widget_context[] = "singular-{$object->post_type}-{$object_id}";
 	}
 
 	/* Archive views. */
 	elseif ( is_archive() ) {
-		$contexts[] = 'archive';
+		$atomic_widget_context[] = 'archive';
 
 		/* Post type archives. */
 		if ( is_post_type_archive() ) {
 			$post_type = get_post_type_object( get_query_var( 'post_type' ) );
-			$contexts[] = "archive-{$post_type->name}";
+			$atomic_widget_context[] = "archive-{$post_type->name}";
 		}
 
 		/* Taxonomy archives. */
 		if ( is_tax() || is_category() || is_tag() ) {
-			$contexts[] = 'taxonomy';
-			$contexts[] = "taxonomy-{$object->taxonomy}";
+			$atomic_widget_context[] = 'taxonomy';
+			$atomic_widget_context[] = "taxonomy-{$object->taxonomy}";
 
 			$slug = ( ( 'post_format' == $object->taxonomy ) ? str_replace( 'post-format-', '', $object->slug ) : $object->slug );
-			$contexts[] = "taxonomy-{$object->taxonomy}-" . sanitize_html_class( $slug, $object->term_id );
+			$atomic_widget_context[] = "taxonomy-{$object->taxonomy}-" . sanitize_html_class( $slug, $object->term_id );
 		}
 
 		/* User/author archives. */
 		if ( is_author() ) {
 			$user_id = get_query_var( 'author' );
-			$contexts[] = 'user';
-			$contexts[] = 'user-' . sanitize_html_class( get_the_author_meta( 'user_nicename', $user_id ), $user_id );
+			$atomic_widget_context[] = 'user';
+			$atomic_widget_context[] = 'user-' . sanitize_html_class( get_the_author_meta( 'user_nicename', $user_id ), $user_id );
 		}
 
 		/* Date archives. */
 		if ( is_date() ) {
-			$contexts[] = 'date';
+			$atomic_widget_context[] = 'date';
 
 			if ( is_year() )
-				$contexts[] = 'year';
+				$atomic_widget_context[] = 'year';
 
 			if ( is_month() )
-				$contexts[] = 'month';
+				$atomic_widget_context[] = 'month';
 
 			if ( get_query_var( 'w' ) )
-				$contexts[] = 'week';
+				$atomic_widget_context[] = 'week';
 
 			if ( is_day() )
-				$contexts[] = 'day';
+				$atomic_widget_context[] = 'day';
 		}
 
 		/* Time archives. */
 		if ( is_time() ) {
-			$contexts[] = 'time';
+			$atomic_widget_context[] = 'time';
 
 			if ( get_query_var( 'hour' ) )
-				$contexts[] = 'hour';
+				$atomic_widget_context[] = 'hour';
 
 			if ( get_query_var( 'minute' ) )
-				$contexts[] = 'minute';
+				$atomic_widget_context[] = 'minute';
 		}
 	}
 
 	/* Search results. */
 	elseif ( is_search() ) {
-		$contexts[] = 'search';
+		$atomic_widget_context[] = 'search';
 	}
 
 	/* Error 404 pages. */
 	elseif ( is_404() ) {
-		$contexts[] = 'error-404';
+		$atomic_widget_context[] = 'error-404';
 	}
 
-	return $contexts;
+	return $atomic_widget_context;
 }
