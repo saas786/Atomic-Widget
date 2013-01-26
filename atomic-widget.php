@@ -1,7 +1,7 @@
 <?php
 /**
  * Plugin Name: Atomic Widget
- * Plugin URI: https://github.com/turtlepod/Atomic-Widget
+ * Plugin URI: http://shellcreeper.com/portfolio/item/atomic-widget/
  * Description: This plugin gives every widget an extra control field called "Atomic Widget" that lets you control the pages that the widget will appear on. The text field lets you use <a href="http://themehybrid.com/docs/tutorials/hybrid-core-context">Hybrid Core Atomic Context</a> by <a href="http://justintadlock.com/">Justin Tadlock</a>.
  * Version: 0.1.0
  * Author: David Chandra Purnama
@@ -21,6 +21,8 @@
  * 		filter to modify conditional output (bool, true/false) 
  * 5. atomic_widgets (require PHP 5.3)
  * 		bulk filter to modify each widgets in one array.
+ * 6. atomic_widget_disable_sidebar
+ * 		filter to disable sidebar if the sidebar have no widget. default: "true" (bool,true/false)
  * 
  * This plugins is based on:
  * 1. Conditional Widgets by Jason Lemahieu and Kevin Graeme.
@@ -63,6 +65,9 @@ function atomic_widget_setup(){
 
 	/* front end display output */
 	add_filter( 'widget_display_callback', 'atomic_widget_display', 10, 3 );
+
+	/* unset the widget from sidebar */
+	add_filter( 'sidebars_widgets', 'widget_atomic_filter_sidebars_widgets', 10 );
 
 	/* update widget instance */
 	add_filter( 'widget_update_callback', 'atomic_widget_update', 10, 2 );
@@ -123,6 +128,8 @@ function atomic_widget_update( $new_instance, $old_instance ) {
 /**
  * Front end display output.
  *
+ * this will return false for widget output.
+ *
  * @since 0.1.0
  */
 function atomic_widget_display( $instance, $widget, $args ) {
@@ -149,6 +156,57 @@ function atomic_widget_display( $instance, $widget, $args ) {
 	$instance = apply_filters( 'atomic_widget_display_' . $widget_id, $instance );
 
 	return $instance;
+}
+
+
+/**
+ * Disable widgets in sidebar
+ * 
+ * unset the widget so sidebar will inactive instead just removing the widgets
+ * 
+ * @since 0.1.1
+ */
+function widget_atomic_filter_sidebars_widgets( $sidebars_widgets ){
+
+	/* filter for theme that have default widget if sidebar is inactive */
+	$atomic_widget_disable_sidebar = apply_filters( 'atomic_widget_disable_sidebar', true );
+
+	/* only in front end */
+	if ( !is_admin() && $atomic_widget_disable_sidebar == true ){
+
+		/* globalize registered widget controls to get instance */
+		global $wp_registered_widget_controls;
+
+		/* simplyfy */
+		$controls = $wp_registered_widget_controls;
+
+		/* get each sidebar / widget area */
+		foreach( $sidebars_widgets as $widget_area => $widget_list ){
+
+			/* get all widget list in the area */
+			foreach( $widget_list as $pos => $widget_id ){
+
+				/* get widget option name */
+				$widget_option_name = $controls[$widget_id]["callback"][0]->option_name;
+
+				/* get widget number, e.g: widget meta-2 number is 2 */
+				$widget_number = $controls[$widget_id]["params"][0]["number"];
+
+				/* get option for the widget */
+				$widgets_option = get_option( $widget_option_name );
+
+				/* get atomic context widget instance */
+				$atomic_instance = $widgets_option[$widget_number]["atomic_context"];
+
+				/* unset the widget from sidebar/widget area */
+				if ( ! atomic_widget_conditional( $atomic_instance ) ){
+					unset( $sidebars_widgets[$widget_area][$pos] );
+				}
+			}
+		}
+	}
+
+	return $sidebars_widgets;
 }
 
 
