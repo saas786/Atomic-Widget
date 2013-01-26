@@ -3,7 +3,7 @@
  * Plugin Name: Atomic Widget
  * Plugin URI: http://shellcreeper.com/portfolio/item/atomic-widget/
  * Description: This plugin gives every widget an extra control field called "Atomic Widget" that lets you control the pages that the widget will appear on. The text field lets you use <a href="http://themehybrid.com/docs/tutorials/hybrid-core-context">Hybrid Core Atomic Context</a> by <a href="http://justintadlock.com/">Justin Tadlock</a>.
- * Version: 0.1.1
+ * Version: 0.1.2
  * Author: David Chandra Purnama
  * Author URI: http://shellcreeper.com/
  *
@@ -38,7 +38,7 @@
  * This program is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; 
  * without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
  *
- * @version 0.1.1
+ * @version 0.1.2
  * @author David Chandra Purnama <david.warna@gmail.com>
  * @copyright Copyright (c) 2013, David Chandra Purnama
  * @license http://www.gnu.org/licenses/old-licenses/gpl-2.0.html
@@ -46,7 +46,7 @@
 
 
 /* Version */
-define( 'ATOMIC_WIDGET_VERSION', '0.1.1' );
+define( 'ATOMIC_WIDGET_VERSION', '0.1.2' );
 
 
 /* Hooks to 'plugins_loaded'  */
@@ -251,18 +251,13 @@ function atomic_widget_conditional( $targets ){
 	/* current page context (the haystack) */
 	$contexts = array();
 
-	/* in hybrid code themes, add core context. */
-	if( function_exists('hybrid_get_context') )
-		$contexts = hybrid_get_context();
-
-	/* in non hybrid code themes, add alternate context. */
-	else
-		$contexts = atomic_widget_context_alt();
+	/* add context. */
+	$contexts = apply_filters( 'hybrid_context', atomic_widget_context_alt() );
 
 	/* add "wp" in context to display widget in all context */
 	$contexts[] = "wp"; // so we can exclude better.
 
-	/* contexts filter, add widget context without add it in hybrid_get_context */
+	/* contexts filter, add widget context without add it in `hybrid_context` */
 	$contexts = array_map( 'esc_attr', apply_filters( 'atomic_widget_context', $contexts ) );
 
 	/* make sure each context is unique */
