@@ -3,7 +3,7 @@
  * Plugin Name: Atomic Widget
  * Plugin URI: http://shellcreeper.com/portfolio/item/atomic-widget/
  * Description: This plugin gives every widget an extra control field called "Atomic Widget" that lets you control the pages that the widget will appear on. The text field lets you use <a href="http://themehybrid.com/docs/tutorials/hybrid-core-context">Hybrid Core Atomic Context</a> by <a href="http://justintadlock.com/">Justin Tadlock</a>.
- * Version: 0.1.0
+ * Version: 0.1.1
  * Author: David Chandra Purnama
  * Author URI: http://shellcreeper.com/
  *
@@ -38,7 +38,7 @@
  * This program is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; 
  * without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
  *
- * @version 0.1.0
+ * @version 0.1.1
  * @author David Chandra Purnama <david.warna@gmail.com>
  * @copyright Copyright (c) 2013, David Chandra Purnama
  * @license http://www.gnu.org/licenses/old-licenses/gpl-2.0.html
@@ -46,7 +46,7 @@
 
 
 /* Version */
-define( 'ATOMIC_WIDGET_VERSION', '0.1.0' );
+define( 'ATOMIC_WIDGET_VERSION', '0.1.1' );
 
 
 /* Hooks to 'plugins_loaded'  */
